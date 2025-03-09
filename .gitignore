@@ -50,3 +50,21 @@ modules.order
 Module.symvers
 Mkfile.old
 dkms.conf
+
+# Eclipse
+.metadata
+.settings
+[Rr]elease
+[Dd]ebug
+*.launch
+.cproject
+.mxproject
+.project
+
+
+#KiCad
+fp-info-cache
+*-backups/
+
+#Test code
+examples

@@ -364,6 +364,8 @@ typedef enum
 #define ZIGBEE_DB_START_ADDR                    (0U)
 #define CFG_EE_AUTO_CLEAN                       (1U)
 
+#define CFG_EE_TIMEOUT                          (10000U)                 // in milliseconds
+
 #define CFG_USE_SMPS 1
 /* USER CODE END Defines */
 

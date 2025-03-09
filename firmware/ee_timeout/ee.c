@@ -18,6 +18,7 @@
 
 #include "ee_cfg.h"
 #include "ee.h"
+#include "stm32wbxx_hal.h"
 
 /*****************************************************************************/
 
@@ -358,12 +359,16 @@ static void EE_Reset( EE_var_t* pv, uint32_t address, uint8_t nb_pages )
 static int EE_Recovery( EE_var_t* pv )
 {
   uint32_t page, first_page, state, prev_state, flash_addr, i;
+  uint32_t tick_start = HAL_GetTick();
 
   /* Search all pages for a reliable RECEIVE page then ACTIVE page */
   for ( state = EE_STATE_RECEIVE; state <= EE_STATE_ACTIVE; state++ )
   {
     for ( page = 0; page < 2UL * pv->nb_pages; page++ )
     {
+      if (HAL_GetTick() - tick_start > CFG_EE_TIMEOUT)
+	  return EE_TIMEOUT_ERROR;
+
       if ( state != EE_GetState( pv, page ) )
         continue;
 

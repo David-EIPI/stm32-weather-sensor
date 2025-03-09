@@ -340,7 +340,20 @@ void APP_ZIGBEE_Init(void)
   UTIL_SEQ_RegTask(1U << CFG_TASK_ZIGBEE_NETWORK_FORM, UTIL_SEQ_RFU, APP_ZIGBEE_NwkForm);
 
   /* USER CODE BEGIN APP_ZIGBEE_INIT */
-  /* USER CODE END APP_ZIGBEE_INIT */
+
+#if USE_FASTPOLL
+  UTIL_SEQ_RegTask(1U << CFG_TASK_ZIGBEE_STOP_FASTPOLL, UTIL_SEQ_RFU, stop_fastpoll_task);
+#endif
+
+  /* NVM Init */
+#if CFG_NVM
+  APP_ZIGBEE_NVM_Init();
+#endif
+
+  if (hw_ts_Successful != HW_TS_Create(CFG_TIM_ZIGBEE_STOP_FASTPOLL_ONESHOT, &hwFastPollTimerId, hw_ts_SingleShot, stop_fastpoll)) {
+	  hwFastPollTimerId = CFG_HW_TS_MAX_NBR_CONCURRENT_TIMER;
+   }
+   /* USER CODE END APP_ZIGBEE_INIT */
 
   /* Start the Zigbee on the CPU2 side */
   ZigbeeInitStatus = SHCI_C2_ZIGBEE_Init();
@@ -1045,16 +1058,14 @@ static void stop_fastpoll(void)
 
 static void stop_fastpoll_task(void)
 {
-	int in_fast_poll = NULL != current_fast_poll;
-
-	if (!in_fast_poll)
+    if (NULL == current_fast_poll)
 		return;
 
     ZbNwkFastPollRelease(zigbee_app_info.zb, current_fast_poll);
 
-	current_fast_poll = NULL;
+    current_fast_poll = NULL;
 
-	UTIL_LPM_SetStopMode(1U << CFG_LPM_FASTPOLL, UTIL_LPM_ENABLE);
+    UTIL_LPM_SetStopMode(1U << CFG_LPM_FASTPOLL, UTIL_LPM_ENABLE);
 }
 #endif
 
@@ -1063,17 +1074,17 @@ void start_fastpoll(uint32_t timeout_us)
 {
 #if USE_FASTPOLL
 
-	if (NULL != current_fast_poll)
-		stop_fastpoll();
+    if (NULL != current_fast_poll)
+	stop_fastpoll_task();
 
     current_fast_poll = ZbNwkFastPollRequest(zigbee_app_info.zb, 0, DIVR(timeout_us, 1000));
 
-	uint32_t timeout_ticks = DIVR(timeout_us, CFG_TS_TICK_VAL);
-	if (hwFastPollTimerId != CFG_HW_TS_MAX_NBR_CONCURRENT_TIMER) {
+    uint32_t timeout_ticks = DIVR(timeout_us, CFG_TS_TICK_VAL);
+    if (hwFastPollTimerId != CFG_HW_TS_MAX_NBR_CONCURRENT_TIMER) {
     	HW_TS_Start(hwFastPollTimerId, timeout_ticks);
     }
-    UTIL_LPM_SetStopMode(1U << CFG_LPM_FASTPOLL, UTIL_LPM_DISABLE);
 
+    UTIL_LPM_SetStopMode(1U << CFG_LPM_FASTPOLL, UTIL_LPM_DISABLE);
 #endif
 }
 

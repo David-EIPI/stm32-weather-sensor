@@ -90,7 +90,8 @@ enum
   EE_CLEAN_NEEDED,  /* data is written but a "clean" is needed */
   EE_ERASE_ERROR,   /* an error occurs during flash erase */
   EE_WRITE_ERROR,   /* an error occurs during flash write */
-  EE_STATE_ERROR    /* state of flash is incoherent (needs clean or format) */
+  EE_STATE_ERROR,   /* state of flash is incoherent (needs clean or format) */
+  EE_TIMEOUT_ERROR  /* Timed out when running EE recovery */
 };
 
 

@@ -386,7 +386,7 @@ int main(void)
   MX_I2C1_Init();
   MX_IWDG_Init();
   MX_ADC1_Init();
-  MX_LPTIM1_Init();
+//  MX_LPTIM1_Init();
   MX_LPUART1_UART_Init();
   MX_RF_Init();
   /* USER CODE BEGIN 2 */
@@ -955,39 +955,48 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
+#if CFG_DEBUG_TRACE
 struct adc_config_params {
 	const char *desc;
 	uint32_t values[2];
 } adc_config_params[] = {
-		{ .desc = "Clock source :", },
-		{ .desc = "Clock enabled:", },
-		{ .desc = "Pin mode     :", },
-		{ .desc = "Common clock :", },
-		{ .desc = "Low power    :", },
-		{ .desc = "SW Trigger   :", },
-		{ .desc = "Power down   :", },
-		{ .desc = "Int Regulator:", },
-		{ .desc = "Int Channels :", },
-		{ .desc = "CR reg       :", },
-		{ .desc = "ISR reg      :", },
-
-		{ .desc = "Rank 1 Chan  :", },
-		{ .desc = "Rank 1 Time  :", },
-		{ .desc = "Rank 1 Diff  :", },
-		{ .desc = "Rank 2 Chan  :", },
-		{ .desc = "Rank 2 Time  :", },
-		{ .desc = "Rank 2 Diff  :", },
-		{ .desc = "Rank 3 Chan  :", },
-		{ .desc = "Rank 3 Time  :", },
-		{ .desc = "Rank 3 Diff  :", },
+	{ .desc = "Clock source :", },
+	{ .desc = "Clock enabled:", },
+	{ .desc = "PLL Config   :", },
+	{ .desc = "PLLSAI1 MulN :", },
+	{ .desc = "PLLSAI1 DivP :", },
+	{ .desc = "ADC Freq     :", },
+	{ .desc = "Pin mode     :", },
+	{ .desc = "Common clock :", },
+	{ .desc = "Low power    :", },
+	{ .desc = "SW Trigger   :", },
+	{ .desc = "Power down   :", },
+	{ .desc = "Int Regulator:", },
+	{ .desc = "Int Channels :", },
+	{ .desc = "CR reg       :", },
+	{ .desc = "ISR reg      :", },
+	{ .desc = "Rank 1 Chan  :", },
+	{ .desc = "Rank 1 Time  :", },
+	{ .desc = "Rank 1 Diff  :", },
+	{ .desc = "Rank 2 Chan  :", },
+	{ .desc = "Rank 2 Time  :", },
+	{ .desc = "Rank 2 Diff  :", },
+	{ .desc = "Rank 3 Chan  :", },
+	{ .desc = "Rank 3 Time  :", },
+	{ .desc = "Rank 3 Diff  :", },
 };
-
+#endif
 
 static void ADC_check(int idx)
 {
+#if CFG_DEBUG_TRACE
 	int q, p = 0;
 	adc_config_params[p++].values[idx] = LL_RCC_GetADCClockSource(LL_RCC_ADC_CLKSOURCE);
 	adc_config_params[p++].values[idx] = LL_AHB2_GRP1_IsEnabledClock(LL_AHB2_GRP1_PERIPH_ADC);
+	adc_config_params[p++].values[idx] = __HAL_RCC_GET_PLLCLKOUT_CONFIG(RCC_PLL_SAI1CLK);
+	adc_config_params[p++].values[idx] = LL_RCC_PLLSAI1_GetN();
+	adc_config_params[p++].values[idx] = LL_RCC_PLLSAI1_GetP();
+	adc_config_params[p++].values[idx] = LL_RCC_GetADCClockFreq(LL_RCC_ADC_CLKSOURCE);
 	adc_config_params[p++].values[idx] = LL_GPIO_GetPinMode(GPIOA, LL_GPIO_PIN_2);
 	adc_config_params[p++].values[idx] = LL_ADC_GetCommonClock(__LL_ADC_COMMON_INSTANCE(ADC1));
 	adc_config_params[p++].values[idx] = LL_ADC_GetLowPowerMode(ADC1);
@@ -995,29 +1004,26 @@ static void ADC_check(int idx)
 	adc_config_params[p++].values[idx] = LL_ADC_IsDeepPowerDownEnabled(ADC1);
 	adc_config_params[p++].values[idx] = LL_ADC_IsInternalRegulatorEnabled(ADC1);
 	adc_config_params[p++].values[idx] = LL_ADC_GetCommonPathInternalCh(__LL_ADC_COMMON_INSTANCE(ADC1));
-
 	adc_config_params[p++].values[idx] = ADC1->CR;
 	adc_config_params[p++].values[idx] = ADC1->ISR;
-
 	adc_config_params[p++].values[idx] = LL_ADC_REG_GetSequencerRanks(ADC1, LL_ADC_REG_RANK_1);
 	q = p;
 	adc_config_params[p++].values[idx] = LL_ADC_GetChannelSamplingTime(ADC1, adc_config_params[q].values[idx]);
 	adc_config_params[p++].values[idx] = LL_ADC_GetChannelSingleDiff(ADC1, adc_config_params[q].values[idx]);
-
 	adc_config_params[p++].values[idx] = LL_ADC_REG_GetSequencerRanks(ADC1, LL_ADC_REG_RANK_2);
 	q = p;
 	adc_config_params[p++].values[idx] = LL_ADC_GetChannelSamplingTime(ADC1, adc_config_params[q].values[idx]);
 	adc_config_params[p++].values[idx] = LL_ADC_GetChannelSingleDiff(ADC1, adc_config_params[q].values[idx]);
-
 	adc_config_params[p++].values[idx] = LL_ADC_REG_GetSequencerRanks(ADC1, LL_ADC_REG_RANK_3);
 	q = p;
 	adc_config_params[p++].values[idx] = LL_ADC_GetChannelSamplingTime(ADC1, adc_config_params[q].values[idx]);
 	adc_config_params[p++].values[idx] = LL_ADC_GetChannelSingleDiff(ADC1, adc_config_params[q].values[idx]);
-
+#endif
 }
 
 static void ADC_check_print(void)
 {
+#if CFG_DEBUG_TRACE
 	unsigned n = sizeof(adc_config_params) / sizeof(adc_config_params[0]);
 	unsigned n2 = n / 2;
 	unsigned i;
@@ -1031,6 +1037,7 @@ static void ADC_check_print(void)
 			APP_DBG("%s %08x %08x", adc_config_params[i].desc, adc_config_params[i].values[0], adc_config_params[i].values[1])
 		}
 	}
+#endif
 }
 
 #if defined (LPTIM1)

@@ -299,8 +299,8 @@ typedef enum
 /*
  * Default reporting settings that match measurement frequency (20s).
  */
-#define DEFAULT_REPORT_MIN 20
-#define DEFAULT_REPORT_MAX 1200
+#define DEFAULT_REPORT_MIN SENSOR_INTERVAL
+#define DEFAULT_REPORT_MAX (DEFAULT_REPORT_MIN*60)
 
 /*
  * If enabled, Zigbee reports will be enforced immediately after each measurements.
@@ -308,7 +308,7 @@ typedef enum
  * correctly registered with the end-device.
  * With this setting the device will send reports at fixed intervals ignoring ZHA configurations.
  */
-#define REPORT_KICK 1
+#define REPORT_KICK 0
 
 /*
  * This is needed for ZHA compatibility.
@@ -326,6 +326,14 @@ typedef enum
  * Parameter value: time in seconds to have fast polling enabled after startup, 0 - disable fast polling.
  */
 #define USE_FASTPOLL 600
+
+/*
+ * Persistence timeout setting in the stack, ms.
+ * This is an approximate value, actual time will vary by +-20% or more.
+ * Default value of 10000ms is too frequent for most sensor
+ * applications, so here it is set to a larger value.
+ */
+#define PERSIST_TIMEOUT 1000000
 
 
 /******************************************************************************
@@ -357,8 +365,10 @@ typedef enum
 
 #define CFG_NB_OF_PAGE                          (16U)
 #define CFG_EE_BANK0_SIZE                       (CFG_NB_OF_PAGE * HW_FLASH_PAGE_SIZE)
-#define CFG_NVM_BASE_ADDRESS                    ( 0x70000U )
+#define CFG_EE_BANK1_SIZE                       (CFG_NB_OF_PAGE * HW_FLASH_PAGE_SIZE)
+#define CFG_NVM_BASE_ADDRESS                    ( 0x60000U )
 #define CFG_EE_BANK0_MAX_NB                     (1000U)                  // In U32 words
+#define CFG_EE_BANK1_MAX_NB                     (1000U)                  // In U32 words
 #define ST_PERSIST_MAX_ALLOC_SZ                 (4U*CFG_EE_BANK0_MAX_NB) // Max data in bytes
 #define ST_PERSIST_FLASH_DATA_OFFSET            (4U)
 #define ZIGBEE_DB_START_ADDR                    (0U)

@@ -160,7 +160,7 @@ void Init_Smps(void)
    *  the SMPS output voltage shall be increased for higher RF output power
    */
   LL_PWR_SMPS_SetStartupCurrent(LL_PWR_SMPS_STARTUP_CURRENT_80MA);
-  LL_PWR_SMPS_SetOutputVoltageLevel(LL_PWR_SMPS_OUTPUT_VOLTAGE_1V40);
+  LL_PWR_SMPS_SetOutputVoltageLevel(LL_PWR_SMPS_OUTPUT_VOLTAGE_1V75);
   LL_PWR_SMPS_Enable();
 #endif /* CFG_USE_SMPS != 0 */
 

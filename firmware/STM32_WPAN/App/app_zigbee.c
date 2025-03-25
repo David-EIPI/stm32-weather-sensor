@@ -254,8 +254,8 @@ struct ZbMsgFilterT * msg_filter = NULL;
 static struct ZbZclAttrT elecAttrList[] = {
 	{
 		ZCL_ELEC_MEAS_ATTR_RMS_VOLT, ZCL_DATATYPE_UNSIGNED_16BIT,
-		ZCL_ATTR_FLAG_WRITABLE | ZCL_ATTR_FLAG_PERSISTABLE | ZCL_ATTR_FLAG_REPORTABLE,
-		sizeof(uint16_t), NULL, {0, 0}, {0, 0},
+		ZCL_ATTR_FLAG_WRITABLE | ZCL_ATTR_FLAG_REPORTABLE,
+		sizeof(uint16_t), NULL, {0, 0}, {DEFAULT_REPORT_MIN, DEFAULT_REPORT_MAX},
 	},
 	{
 			ZCL_ELEC_MEAS_ATTR_AC_VOLT_MULTIPLIER, ZCL_DATATYPE_UNSIGNED_16BIT, 0, sizeof(uint16_t), NULL, {0, 0}, {0, 0},
@@ -272,8 +272,8 @@ static struct ZbZclAttrT elecAttrList[] = {
 static struct ZbZclAttrT pressureExtAttrList[] = {
 	{
 		ZCL_PRESS_MEAS_ATTR_SCALED_VAL, ZCL_DATATYPE_UNSIGNED_16BIT,
-		ZCL_ATTR_FLAG_WRITABLE | ZCL_ATTR_FLAG_PERSISTABLE | ZCL_ATTR_FLAG_REPORTABLE,
-		sizeof(uint16_t), NULL, {0, 0}, {0, 0},
+		ZCL_ATTR_FLAG_WRITABLE | ZCL_ATTR_FLAG_REPORTABLE,
+		sizeof(uint16_t), NULL, {0, 0}, {DEFAULT_REPORT_MIN, DEFAULT_REPORT_MAX},
 	},
 	{
 			ZCL_PRESS_MEAS_ATTR_SCALE, ZCL_DATATYPE_UNSIGNED_16BIT, 0, sizeof(uint16_t), NULL, {0, 0}, {0, 0},
@@ -283,6 +283,27 @@ static struct ZbZclAttrT pressureExtAttrList[] = {
 	},
 	{
 			ZCL_PRESS_MEAS_ATTR_MAX_SCALED_VAL, ZCL_DATATYPE_UNSIGNED_16BIT, 0, sizeof(uint16_t), NULL, {0, 0}, {0, 0},
+	},
+	{
+		ZCL_PRESS_MEAS_ATTR_MEAS_VAL, ZCL_DATATYPE_UNSIGNED_16BIT,
+		ZCL_ATTR_FLAG_WRITABLE | ZCL_ATTR_FLAG_REPORTABLE,
+		sizeof(uint16_t), NULL, {0, 0}, {DEFAULT_REPORT_MIN, DEFAULT_REPORT_MAX},
+	},
+};
+
+static struct ZbZclAttrT temperatureAttrList[] = {
+	{
+	        ZCL_TEMP_MEAS_ATTR_MEAS_VAL, ZCL_DATATYPE_UNSIGNED_16BIT,
+		ZCL_ATTR_FLAG_WRITABLE | ZCL_ATTR_FLAG_REPORTABLE,
+		sizeof(uint16_t), NULL, {0, 0}, {DEFAULT_REPORT_MIN, DEFAULT_REPORT_MAX},
+	},
+};
+
+static struct ZbZclAttrT humidityAttrList[] = {
+	{
+	        ZCL_WC_MEAS_ATTR_MEAS_VAL, ZCL_DATATYPE_UNSIGNED_16BIT,
+		ZCL_ATTR_FLAG_WRITABLE | ZCL_ATTR_FLAG_REPORTABLE,
+		sizeof(uint16_t), NULL, {0, 0}, {DEFAULT_REPORT_MIN, DEFAULT_REPORT_MAX},
 	},
 };
 
@@ -391,17 +412,10 @@ static void APP_ZIGBEE_StackLayersInit(void)
 
   /* Increase transmission power (to 3.7dbm). Default setting is 0. */
   ZbNwkIfSetTxPower(zigbee_app_info.zb, "wpan0", 6);
-
-  /* Extend default persistence timeouts. Default value of 10s is too frequent and is unnecessary in this application. */
-  uint32_t pers_tm = 0;
-  enum ZbStatusCodeT res = ZbBdbGetIndex(zigbee_app_info.zb, ZB_BDB_PersistTimeoutMs, &pers_tm, 4, 0);
-  if (ZB_STATUS_SUCCESS == res) {
-	  pers_tm *= 10000;
-	  ZbBdbSetIndex(zigbee_app_info.zb, ZB_BDB_PersistTimeoutMs, &pers_tm, sizeof(pers_tm), 0);
-  }
+  enum ZbStatusCodeT res;
 
   /* Remove parent link strength threshold. This application does not transmit frequent data
-   * and association happens faster when more nodes are avaialable.  */
+   * and association happens faster when more nodes are available.  */
   uint32_t bdb_flags = 0;
   res = ZbBdbGetIndex(zigbee_app_info.zb, ZB_BDB_Flags, &bdb_flags, sizeof(bdb_flags), 0);
   if (ZB_STATUS_SUCCESS == res) {
@@ -424,11 +438,14 @@ static void APP_ZIGBEE_StackLayersInit(void)
      APP_DBG("ZbStartupPersist: SUCCESS, restarted from persistence");
 
      ZbNwkGet(zigbee_app_info.zb, ZB_NWK_NIB_ID_ExtendedPanId, &zb_epanId, sizeof(zb_epanId));
-     APP_DBG("Network id: 0x%x%x", zb_epanId >> 32, zb_epanId);
+     APP_DBG("Network id: 0x%x%x", zb_epanId >> 32, zb_epanId & 0xffffffff);
 
      zigbee_app_info.startupControl = ZbStartTypeJoin;
      zigbee_app_info.join_status = ZB_STATUS_SUCCESS;
 
+     /* Extend default persistence timeouts. Default value of 10s is too frequent and is unnecessary in this application. */
+     uint32_t pers_tm = PERSIST_TIMEOUT;
+     ZbBdbSetIndex(zigbee_app_info.zb, ZB_BDB_PersistTimeoutMs, &pers_tm, sizeof(pers_tm), 0);
 
      UTIL_LPM_SetStopMode(1U << CFG_LPM_APP, UTIL_LPM_ENABLE);
      return;
@@ -498,22 +515,14 @@ static void APP_ZIGBEE_ConfigEndpoints(void)
 
   if (ZCL_STATUS_SUCCESS == result) {
 	  (void)ZbZclAttrIntegerWrite(zigbee_app_info.pressure_meas_server_1, ZCL_PRESS_MEAS_ATTR_SCALE, 2); /* scale = 10^2 */
-//	  (void)ZbZclAttrIntegerWrite(zigbee_app_info.pressure_meas_server_1, ZCL_PRESS_MEAS_ATTR_SCALED_VAL, 5000); // 10 x Pa
 	  (void)ZbZclAttrIntegerWrite(zigbee_app_info.pressure_meas_server_1, ZCL_PRESS_MEAS_ATTR_MIN_SCALED_VAL, 2000); // 10 x Pa
 	  (void)ZbZclAttrIntegerWrite(zigbee_app_info.pressure_meas_server_1, ZCL_PRESS_MEAS_ATTR_MAX_SCALED_VAL, 20000); // 10 x Pa
-
-	  (void)ZbZclAttrReportConfigDefault(zigbee_app_info.pressure_meas_server_1,
-			  ZCL_PRESS_MEAS_ATTR_SCALED_VAL, DEFAULT_REPORT_MIN, DEFAULT_REPORT_MAX, NULL);
   }
 
   /* Basic pressure attributes */
   result = ZbZclAttrIntegerWrite(zigbee_app_info.pressure_meas_server_1, ZCL_PRESS_MEAS_ATTR_MIN_MEAS_VAL, 200); // hPa
   if (ZCL_STATUS_SUCCESS == result) {
-//	  (void)ZbZclAttrIntegerWrite(zigbee_app_info.pressure_meas_server_1, ZCL_PRESS_MEAS_ATTR_MEAS_VAL, 500); // hPa
 	  (void)ZbZclAttrIntegerWrite(zigbee_app_info.pressure_meas_server_1, ZCL_PRESS_MEAS_ATTR_MAX_MEAS_VAL, 2000); // hPa
-
-	  (void)ZbZclAttrReportConfigDefault(zigbee_app_info.pressure_meas_server_1,
-			  ZCL_PRESS_MEAS_ATTR_MEAS_VAL, DEFAULT_REPORT_MIN, DEFAULT_REPORT_MAX, NULL);
   }
 
   /* Electrical measurements attributes */
@@ -524,18 +533,16 @@ static void APP_ZIGBEE_ConfigEndpoints(void)
 	  (void)ZbZclAttrIntegerWrite(zigbee_app_info.electricalMeasurement_server_1, ZCL_ELEC_MEAS_ATTR_MEAS_TYPE, (1<<0) /* AC measurement */);
 	  (void)ZbZclAttrIntegerWrite(zigbee_app_info.electricalMeasurement_server_1, ZCL_ELEC_MEAS_ATTR_AC_VOLT_MULTIPLIER, 1);
 	  (void)ZbZclAttrIntegerWrite(zigbee_app_info.electricalMeasurement_server_1, ZCL_ELEC_MEAS_ATTR_AC_VOLT_DIVISOR, 1000);
-//	  (void)ZbZclAttrIntegerWrite(zigbee_app_info.electricalMeasurement_server_1, ZCL_ELEC_MEAS_ATTR_RMS_VOLT, 0);
-	  (void)ZbZclAttrReportConfigDefault(zigbee_app_info.electricalMeasurement_server_1,
-			  ZCL_ELEC_MEAS_ATTR_RMS_VOLT, DEFAULT_REPORT_MIN, DEFAULT_REPORT_MAX, NULL);
   }
 
   /* Temperature reporting */
-  (void)ZbZclAttrReportConfigDefault(zigbee_app_info.temperature_meas_server_1,
-		  ZCL_TEMP_MEAS_ATTR_MEAS_VAL, DEFAULT_REPORT_MIN, DEFAULT_REPORT_MAX, NULL);
+  unsigned temp_attr_count = ZCL_ATTR_LIST_LEN(temperatureAttrList);
+  (void)ZbZclAttrAppendList(zigbee_app_info.temperature_meas_server_1, temperatureAttrList, temp_attr_count);
 
   /* Humidity reporting */
-  (void)ZbZclAttrReportConfigDefault(zigbee_app_info.water_content_server_1,
-		  ZCL_WC_MEAS_ATTR_MEAS_VAL, DEFAULT_REPORT_MIN, DEFAULT_REPORT_MAX, NULL);
+  unsigned hum_attr_count = ZCL_ATTR_LIST_LEN(humidityAttrList);
+  (void)ZbZclAttrAppendList(zigbee_app_info.water_content_server_1, humidityAttrList, hum_attr_count);
+
   /* USER CODE END CONFIG_ENDPOINT */
 }
 
@@ -602,6 +609,9 @@ static void APP_ZIGBEE_NwkForm(void)
       /* Call the callback once here to save persistence data */
         APP_ZIGBEE_persist_notify_cb(zigbee_app_info.zb,NULL);
 #endif
+        /* Extend default persistence timeouts. Default value of 10s is too frequent and is unnecessary in this application. */
+        uint32_t pers_tm = PERSIST_TIMEOUT;
+        ZbBdbSetIndex(zigbee_app_info.zb, ZB_BDB_PersistTimeoutMs, &pers_tm, sizeof(pers_tm), 0);
 
       /* USER CODE END 2 */
     }
@@ -1032,7 +1042,7 @@ void APP_ZIGBEE_update_ADC_outputs(uint32_t voltage)
 
 /*
  * Periodic check for link health. This function is called every time sensor measurements are made
- * and increments the data counter. This counter is reset in the filter callback when data-related filter is called.
+ * and increments data counter. This counter is reset in the filter callback when data-related filter is called.
  * As long as the counter is reset the watchdog is refreshed. If link is lost and Zigbee data exchange does
  * not happen for some extended period of time the system will be restarted.
  * This mechanism is here because maximum IWDG interval is ~32s, which is too short.
@@ -1043,7 +1053,9 @@ static uint32_t zb_data_filter_counter = 0;
 void zigbee_check_link(void)
 {
 	if (zb_data_filter_counter < 20) {
-		HAL_IWDG_Refresh(&hiwdg);
+//		HAL_IWDG_Refresh(&hiwdg);
+//		APP_DBG("Watchdog refreshed.")
+	    update_watchdog();
 	}
 
 	zb_data_filter_counter += 1;
@@ -1103,7 +1115,7 @@ app_msg_filter_callback(struct ZigBeeT *zb, uint32_t id, void *msg, void *arg)
 					zb_data_filter_counter = 0;
 				} else {
 				/* Update status and erase persistence data if permanent leave is requested. */
-					ZIGBEE_Leave();
+//					ZIGBEE_Leave();
 					zigbee_app_info.join_status = (enum ZbStatusCodeT) 0x04; /* init to error status */
 					zigbee_app_info.join_delay = HAL_GetTick() + APP_ZIGBEE_STARTUP_REJOIN_DELAY;
 					UTIL_SEQ_SetTask(1U << CFG_TASK_ZIGBEE_NETWORK_FORM, CFG_SCH_PRIO_0);

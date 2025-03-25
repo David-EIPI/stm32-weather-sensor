@@ -19,6 +19,9 @@
 #include "ee_cfg.h"
 #include "ee.h"
 #include "stm32wbxx_hal.h"
+#include "stm_logging.h"
+#include "dbg_trace.h"
+#include "app_entry.h"
 
 /*****************************************************************************/
 
@@ -96,7 +99,8 @@ enum
 
 /* Macro used for debug (empty by default) */
 #ifndef EE_DBG
-#define EE_DBG( x )
+#define EE_DBG( x ) APP_DBG_FULL(LOG_LEVEL_NONE, 0, #x)
+#define EE_DBG_X( x, args... ) APP_DBG_FULL(LOG_LEVEL_NONE, 0, #x args)
 #endif /* !EE_DBG */
 
 /* Definition of global variables structure */
@@ -127,7 +131,7 @@ static void EE_Reset( EE_var_t* pv, uint32_t address, uint8_t nb_pages );
 
 static int EE_Recovery( EE_var_t* pv );
 
-static int EE_Transfer( EE_var_t* pv, uint16_t addr, uint32_t page );
+static int EE_Transfer( EE_var_t* pv, uint16_t addr, uint32_t page, uint32_t timeout);
 
 static int EE_WriteEl( EE_var_t* pv, uint16_t addr, uint32_t data );
 
@@ -260,7 +264,7 @@ int EE_Write( int bank, uint16_t addr, uint32_t data )
 
   /* Set the previous ACTIVE pool to ERASING and copy the latest written
      values to the new pool */
-  if ( EE_Transfer( pv, addr, page ) != EE_OK )
+  if ( EE_Transfer( pv, addr, page, 0 ) != EE_OK )
   {
     return EE_WRITE_ERROR;
   }
@@ -431,7 +435,7 @@ static int EE_Recovery( EE_var_t* pv )
       if ( state == EE_STATE_RECEIVE )
       {
         /* Resume pool transfer */
-        if ( EE_Transfer( pv, EE_TAG, page ) != EE_OK )
+        if ( EE_Transfer( pv, EE_TAG, page, tick_start + CFG_EE_TIMEOUT ) != EE_OK )
         {
           return EE_WRITE_ERROR;
         }
@@ -464,7 +468,7 @@ static int EE_Recovery( EE_var_t* pv )
 
 /*****************************************************************************/
 
-static int EE_Transfer( EE_var_t* pv, uint16_t addr, uint32_t page )
+static int EE_Transfer( EE_var_t* pv, uint16_t addr, uint32_t page, uint32_t timeout )
 {
   uint32_t state, var, data, last_page;
 
@@ -484,6 +488,9 @@ static int EE_Transfer( EE_var_t* pv, uint16_t addr, uint32_t page )
     page = last_page;
     while ( 1 )
     {
+	if (timeout && HAL_GetTick() > timeout)
+	  return EE_TIMEOUT_ERROR;
+
       state = EE_GetState( pv, page );
 
       if ( (state == EE_STATE_ACTIVE) || (state == EE_STATE_VALID) )
@@ -509,6 +516,8 @@ static int EE_Transfer( EE_var_t* pv, uint16_t addr, uint32_t page )
 
   for ( var = 0; var < EE_NB_MAX_ELT * pv->nb_pages; var++ )
   {
+	if (timeout && HAL_GetTick() > timeout)
+	  return EE_TIMEOUT_ERROR;
     /* Check each variable except the one passed as parameter
        (and except the ones already transferred in case of recovery) */
     if  ( (var != addr) &&
@@ -518,8 +527,10 @@ static int EE_Transfer( EE_var_t* pv, uint16_t addr, uint32_t page )
       /* Read the last variable update */
       if ( EE_ReadEl( pv, var, &data, last_page ) == EE_OK )
       {
-        EE_DBG( EE_7 );
+        EE_DBG_X( EE_7, " %u/%u", var, EE_NB_MAX_ELT * pv->nb_pages );
 
+        /* This loop can take a long time, so we need to allow to refresh IWDG*/
+        update_watchdog();
         /* In case variable corresponding to the virtual address was found,
            copy the variable to the new active page */
         if ( EE_WriteEl( pv, var, data ) != EE_OK )

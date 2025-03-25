@@ -61,7 +61,7 @@ void Init_Exti(void);
 void Init_Smps(void);
 
 /* USER CODE BEGIN EF */
-
+void update_watchdog(void);
 /* USER CODE END EF */
 
 #ifdef __cplusplus

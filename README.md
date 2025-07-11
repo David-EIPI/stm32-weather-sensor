@@ -16,9 +16,24 @@ This compact board provides essential features:
 
 For sensing, I've considered either the BME280 or BMP280 paired with an AHT20. Both sensors are readily available on Aliexpress, pre-soldered onto breakout boards. The difference between these sensors is minimal, but in my tests, the BMP280+AHT20 pair provided slightly more accurate temperature and humidity measurements, thus making it into the final design.
 
-In addition to the sensors, I've selected a small outdoor solar-powered light with a replaceable battery, also from Aliexpress. It acts both as the power source and enclosure while still serving its primary purpose as an outdoor light. There's sufficient space inside the enclosure to house the controller board. However, the sensor itself must be placed outside the casing, as the enclosure may heat up significantly in direct sunlight.
+The sensor is enclosed in a small aluminum pillcase:
+![Sensor casing](images/sensor_casing.jpg "Sensor enclosure")
+
+I have cut a thin slit near the bottom with a utility knife to allow for air exchange. Adhesive felt disk is attached to the bottom from the inside covers the slit to protect the sensor from water, dust and insects. It also isolates the board from the contact with the exposed metal of the casing.
+
+In addition to the sensors, I've selected a small outdoor solar-powered light with a replaceable battery, also from Aliexpress. It acts both as the power source and enclosure while still serving its primary purpose as an outdoor light. There's sufficient space inside the enclosure to house the controller board.
+![MCU board](images/mcu_assembly1.jpg "MCU board")
 
 To monitor battery charge levels, I have implemented a simple voltage divider. While straightforward to implement, its downside is a continuous, albeit minimal, background battery discharge. To mitigate this, I used two high-value resistors (1MΩ and 330KΩ), minimizing the discharge current. Testing with the ADC revealed that about 50 ms of sampling is needed to measure battery voltage accurately. For the project's purpose, this sampling time is acceptable.
+
+Voltage divider resistors are soldered at the bottom of the MCU board:
+![MCU board back](images/mcu_assembly2.jpg "MCU board back")
+
+
+The sensor itself must be placed outside the casing, as the enclosure may heat up significantly in direct sunlight. I have used an 8' cable to move the sensor to a shaded area.
+![Assembled sensor](images/final_assembly.jpg "Assembled sensor")
+
+
 
 ## Zigbee Setup
 Since this sensor is battery-powered, it must be configured as a sleepy end device. The firmware implements one endpoint and four measurement clusters:

@@ -2,7 +2,6 @@ from zigpy.quirks.v2 import QuirkBuilder
 from zigpy.quirks.v2.homeassistant import EntityType, UnitOfPressure
 from zigpy.quirks.v2.homeassistant.sensor import SensorDeviceClass, SensorStateClass
 from zigpy.zcl.clusters.measurement import PressureMeasurement
-from zha.application.platforms.sensor import ElectricalMeasurementRMSVoltage
 
 from zha.zigbee.cluster_handlers.measurement import (
         RelativeHumidityClusterHandler,
@@ -33,9 +32,6 @@ TemperatureMeasurementClusterHandler.REPORT_CONFIG = (
 )
 
 import zigpy.types as t
-
-# increase display accuracy for electrical measurements (default = 1)
-ElectricalMeasurementRMSVoltage._decimals = 3
 
 # add support for scaled pressure attribute with higher precision
 (

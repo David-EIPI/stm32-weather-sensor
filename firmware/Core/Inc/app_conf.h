@@ -289,6 +289,10 @@ typedef enum
 /* 1 - use AHT20 to read humidity, 0 - use bme280 */
 #define USE_AHT20 1
 
+/* Threshold voltage of the charged battery.
+ * Above this threshold the controller will not enter sleep mode. */
+#define BATTERY_FULL_VOLTAGE 4200
+
 /***************************
 * Zigbee Application configuration and parameters
 ****************************/
@@ -459,7 +463,7 @@ typedef enum
 {
   CFG_LPM_APP,
   /* USER CODE BEGIN CFG_LPM_Id_t */
-  CFG_LPM_SENSORS,
+  CFG_LPM_VOLTAGE,
   CFG_LPM_FASTPOLL,
   /* USER CODE END CFG_LPM_Id_t */
 } CFG_LPM_Id_t;

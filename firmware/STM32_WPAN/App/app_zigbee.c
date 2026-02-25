@@ -258,10 +258,10 @@ static struct ZbZclAttrT elecAttrList[] = {
 		sizeof(uint16_t), NULL, {0, 0}, {DEFAULT_REPORT_MIN, DEFAULT_REPORT_MAX},
 	},
 	{
-			ZCL_ELEC_MEAS_ATTR_AC_VOLT_MULTIPLIER, ZCL_DATATYPE_UNSIGNED_16BIT, 0, sizeof(uint16_t), NULL, {0, 0}, {0, 0},
+			ZCL_ELEC_MEAS_ATTR_DC_VOLT_MULTIPLIER, ZCL_DATATYPE_UNSIGNED_16BIT, 0, sizeof(uint16_t), NULL, {0, 0}, {0, 0},
 	},
 	{
-			ZCL_ELEC_MEAS_ATTR_AC_VOLT_DIVISOR, ZCL_DATATYPE_UNSIGNED_16BIT, 0, sizeof(uint16_t), NULL, {0, 0}, {0, 0},
+			ZCL_ELEC_MEAS_ATTR_DC_VOLT_DIVISOR, ZCL_DATATYPE_UNSIGNED_16BIT, 0, sizeof(uint16_t), NULL, {0, 0}, {0, 0},
 	},
 };
 
@@ -293,7 +293,7 @@ static struct ZbZclAttrT pressureExtAttrList[] = {
 
 static struct ZbZclAttrT temperatureAttrList[] = {
 	{
-	        ZCL_TEMP_MEAS_ATTR_MEAS_VAL, ZCL_DATATYPE_UNSIGNED_16BIT,
+	        ZCL_TEMP_MEAS_ATTR_MEAS_VAL, ZCL_DATATYPE_SIGNED_16BIT,
 		ZCL_ATTR_FLAG_WRITABLE | ZCL_ATTR_FLAG_REPORTABLE,
 		sizeof(uint16_t), NULL, {0, 0}, {DEFAULT_REPORT_MIN, DEFAULT_REPORT_MAX},
 	},
@@ -530,9 +530,9 @@ static void APP_ZIGBEE_ConfigEndpoints(void)
   result = ZbZclAttrAppendList(zigbee_app_info.electricalMeasurement_server_1, elecAttrList, elec_attr_count);
 
   if (ZCL_STATUS_SUCCESS == result) {
-	  (void)ZbZclAttrIntegerWrite(zigbee_app_info.electricalMeasurement_server_1, ZCL_ELEC_MEAS_ATTR_MEAS_TYPE, (1<<0) /* AC measurement */);
-	  (void)ZbZclAttrIntegerWrite(zigbee_app_info.electricalMeasurement_server_1, ZCL_ELEC_MEAS_ATTR_AC_VOLT_MULTIPLIER, 1);
-	  (void)ZbZclAttrIntegerWrite(zigbee_app_info.electricalMeasurement_server_1, ZCL_ELEC_MEAS_ATTR_AC_VOLT_DIVISOR, 1000);
+	  (void)ZbZclAttrIntegerWrite(zigbee_app_info.electricalMeasurement_server_1, ZCL_ELEC_MEAS_ATTR_MEAS_TYPE, (1<<6)); /* 0 = AC measurement, 6 = DC */
+	  (void)ZbZclAttrIntegerWrite(zigbee_app_info.electricalMeasurement_server_1, ZCL_ELEC_MEAS_ATTR_DC_VOLT_MULTIPLIER, 1);
+	  (void)ZbZclAttrIntegerWrite(zigbee_app_info.electricalMeasurement_server_1, ZCL_ELEC_MEAS_ATTR_DC_VOLT_DIVISOR, 1000);
   }
 
   /* Temperature reporting */
@@ -1031,7 +1031,10 @@ void APP_ZIGBEE_update_ADC_outputs(uint32_t voltage)
 	if (freeze_updates)
 		return;
 
-	(void)ZbZclAttrIntegerWrite(zigbee_app_info.electricalMeasurement_server_1, ZCL_ELEC_MEAS_ATTR_RMS_VOLT, voltage);
+/* Do not go to sleep mode if voltage exceeds normal full charge level (i.e. the battery is being overcharged) */
+	UTIL_LPM_SetStopMode(1U << CFG_LPM_VOLTAGE, (voltage > BATTERY_FULL_VOLTAGE) ? UTIL_LPM_DISABLE : UTIL_LPM_ENABLE);
+
+	(void)ZbZclAttrIntegerWrite(zigbee_app_info.electricalMeasurement_server_1, ZCL_ELEC_MEAS_ATTR_DC_VOLT/*ZCL_ELEC_MEAS_ATTR_RMS_VOLT*/, voltage);
 #if REPORT_KICK
 	ZbZclAttrReportKick(zigbee_app_info.electricalMeasurement_server_1, 1, NULL, NULL);
 #endif

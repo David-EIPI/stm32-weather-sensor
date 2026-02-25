@@ -187,11 +187,11 @@ static int adc_enable(void)
 	LL_ADC_ClearFlag_OVR(ADC1);
 
 	/* Run ADC self calibration and wait for completion */
-    LL_ADC_StartCalibration(ADC1, LL_ADC_SINGLE_ENDED);
-    if (wait_for_flag(LL_ADC_IsCalibrationOnGoing, 0) < 0) {
-    	ADC_check(1);
-    	return -1;
-    }
+        LL_ADC_StartCalibration(ADC1, LL_ADC_SINGLE_ENDED);
+        if (wait_for_flag(LL_ADC_IsCalibrationOnGoing, 0) < 0) {
+    	   ADC_check(1);
+    	   return -1;
+        }
 	/* Another short delay is needed here */
 	HAL_Delay(1);
 
@@ -290,6 +290,15 @@ void seq_main_loop(void)
 		/* Use AHT temperature measurement if BMP280 data is unavailable. */
 		if (ZCL_TEMP_MEAS_UNKNOWN == bme280_meas_data.temperature) {
 			bme280_meas_data.temperature = aht20_data.temperature;
+/*
+		} else {
+		    if (bme280_meas_data.temperature < 128 && bme280_meas_data.temperature > 0) {
+			bme280_meas_data.temperature = (bme280_meas_data.temperature * bme280_meas_data.temperature +
+			    aht20_data.temperature * (128 - bme280_meas_data.temperature)) / 128;
+		    } else if (bme280_meas_data.temperature <= 0) {
+			bme280_meas_data.temperature = aht20_data.temperature;
+		    }
+*/
 		}
 	}
 #endif
